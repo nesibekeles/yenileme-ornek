@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>düğün.com · Yenileme Modülü — Örnek</title>
+<!-- ?v= is a cache buster: bump it whenever app.css/app.js/data change, or
+     reps keep seeing the previous build after a deploy. -->
+<link rel="stylesheet" href="auth.css?v=demo1">
+<link rel="stylesheet" href="app.css?v=demo1">
+<style>#tab-new{display:none!important}.demo-badge{background:#fff;color:#E21B71;font-weight:800;font-size:11px;letter-spacing:.06em;border-radius:999px;padding:4px 10px;margin-left:10px}</style>
+</head>
+<body>
+
+<header class="top">
+  <img class="logo" src="assets/logo-krem.svg" alt="düğün.com">
+  <span class="sep"></span>
+  <nav class="tabs" role="tablist" aria-label="Ana bölümler">
+    <button class="tab" role="tab" id="tab-new" aria-selected="true" data-tab="new">Yeni Satış</button>
+    <span class="demo-badge">ÖRNEK · YENİLEME</span><button class="tab" role="tab" id="tab-ren" aria-selected="false" data-tab="ren">Yenileme</button>
+  </nav>
+  <span class="spacer"></span>
+  <button class="tool-btn" id="btn-present" title="İç notları gizler, ekranı müşteriye çevirmeye hazır hale getirir">🎬 Sunum Modu</button>
+  <button class="tool-btn" id="btn-note" title="Not defteri (N)">📝 Notlar <span class="badge" id="note-count" hidden>0</span></button>
+  <button class="tool-btn" id="btn-pen" title="Ekranın üzerine çizin (P)">✏️ Kalem</button>
+  <button class="tool-btn no-print" id="btn-print" title="Yazdır / PDF">🖨️</button>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <div id="nav-new">
+      <div class="grp">Yeni Satış</div>
+      <button class="nav-item" data-sec="setup" aria-current="true"><span class="ic">🎯</span> Görüşme Kurulumu</button>
+      <button class="nav-item" data-sec="intro"><span class="ic">🏛️</span> Düğün.com'u Tanıtın</button>
+      <button class="nav-item" data-sec="avm"><span class="ic">🏬</span> AVM Benzetmesi</button>
+      <button class="nav-item" data-sec="sim"><span class="ic">📊</span> Satış Simülatörü</button>
+      <button class="nav-item" data-sec="packages"><span class="ic">🎁</span> Yatırım &amp; Teklif</button>
+      <button class="nav-item" data-sec="objections"><span class="ic">🛡️</span> İtiraz Kütüphanesi</button>
+      <button class="nav-item" data-sec="flow"><span class="ic">🧭</span> Görüşme Akışı</button>
+      <button class="nav-item" data-sec="board"><span class="ic">🖊️</span> Beyaz Tahta</button>
+      <button class="nav-item" data-sec="stories"><span class="ic">⭐</span> Başarı Hikâyeleri</button>
+      <button class="nav-item" data-sec="app"><span class="ic">📱</span> Connect Uygulaması</button>
+    </div>
+    <div id="nav-ren" hidden>
+      <div class="grp">Yenileme</div>
+      <button class="nav-item" data-sec="pick" aria-current="true"><span class="ic">🔍</span> Firma Seç</button>
+      <button class="nav-item" data-sec="karne"><span class="ic">📋</span> Firma Karnesi</button>
+      <button class="nav-item" data-sec="trend"><span class="ic">📈</span> Aylık Seyir</button>
+      <button class="nav-item" data-sec="verdict"><span class="ic">✅</span> Değerlendirme</button>
+      <button class="nav-item" data-sec="upsell"><span class="ic">🚀</span> Ya Olsaydı? · Upsell</button>
+      <button class="nav-item" data-sec="offer"><span class="ic">🤝</span> Yenileme Teklifi</button>
+      <button class="nav-item" data-sec="brief"><span class="ic">🔒</span> Görüşme Öncesi Brief</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="wrap">
+      <div id="meeting-ribbon" hidden></div>
+      <!-- YENİ SATIŞ -->
+      <section class="view on" id="v-setup"></section>
+      <section class="view" id="v-intro"></section>
+      <section class="view" id="v-avm"></section>
+      <section class="view" id="v-sim"></section>
+      <section class="view" id="v-packages"></section>
+      <section class="view" id="v-objections"></section>
+      <section class="view" id="v-flow"></section>
+      <section class="view" id="v-board"></section>
+      <section class="view" id="v-stories"></section>
+      <section class="view" id="v-app"></section>
+      <!-- YENİLEME -->
+      <section class="view" id="v-pick"></section>
+      <section class="view" id="v-karne"></section>
+      <section class="view" id="v-trend"></section>
+      <section class="view" id="v-verdict"></section>
+      <section class="view" id="v-upsell"></section>
+      <section class="view" id="v-offer"></section>
+      <section class="view" id="v-brief"></section>
+    </div>
+  </main>
+</div>
+
+<!-- screen-wide drawing overlay -->
+<canvas id="draw"></canvas>
+<div class="draw-bar" id="draw-bar">
+  <span class="swatch" data-col="#E21B71" style="background:#E21B71" aria-pressed="true" title="Pembe"></span>
+  <span class="swatch" data-col="#191919" style="background:#191919" aria-pressed="false" title="Siyah"></span>
+  <span class="swatch" data-col="#26B2AB" style="background:#26B2AB" aria-pressed="false" title="Yeşil"></span>
+  <span class="swatch" data-col="#FF8569" style="background:#FF8569" aria-pressed="false" title="Mercan"></span>
+  <span class="swatch" data-col="#FFE24A" style="background:#FFE24A" aria-pressed="false" title="Sarı (vurgu)"></span>
+  <span class="vsep"></span>
+  <button class="chip" data-pen="thin"  aria-pressed="true">İnce</button>
+  <button class="chip" data-pen="thick" aria-pressed="false">Kalın</button>
+  <button class="chip" data-pen="mark"  aria-pressed="false">🖍️ Vurgula</button>
+  <span class="vsep"></span>
+  <button class="chip" id="pen-undo">↶ Geri</button>
+  <button class="chip" id="pen-clear">Temizle</button>
+  <button class="btn sm" id="pen-close">Kapat</button>
+</div>
+
+<!-- feedback notes -->
+<aside class="notes-panel" id="notes-panel" hidden>
+  <header>
+    <b>📝 Toplantı Notları</b>
+    <span class="spacer"></span>
+    <button class="chip" id="notes-copy" title="Tümünü panoya kopyala">Kopyala</button>
+    <button class="chip" id="notes-close">✕</button>
+  </header>
+  <div class="notes-new">
+    <textarea id="note-text" rows="3" placeholder="Feedback / aksiyon notu…"></textarea>
+    <div class="chips" id="note-tags">
+      <button class="chip" data-tag="Feedback" aria-pressed="true">Feedback</button>
+      <button class="chip" data-tag="Aksiyon" aria-pressed="false">Aksiyon</button>
+      <button class="chip" data-tag="Soru" aria-pressed="false">Soru</button>
+      <button class="chip" data-tag="Fikir" aria-pressed="false">Fikir</button>
+    </div>
+    <button class="btn sm" id="note-add">Ekle</button>
+  </div>
+  <div class="notes-list" id="notes-list"></div>
+</aside>
+
+<script src="data/config.js?v=demo1"></script>
+<script src="auth.js?v=demo1"></script>
+<script src="data/content.js?v=demo1"></script>
+<script src="data/livemap.js?v=demo1"></script>
+<script src="data/pricing.js?v=demo1"></script>
+<script src="data/renewal.js?v=demo1"></script>
+<script src="app.js?v=demo1"></script>
+<script>setTimeout(function(){var t=document.getElementById('tab-ren');if(t)t.click();},0);</script>
+</body>
+</html>

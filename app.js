@@ -160,7 +160,7 @@ function groupedBars(labels, mine, peer, opt) {
 
 /* -------------------------------------------------------------- app state */
 var state = {
-  tab: "new",
+  tab: "ren",
   sec: { new: "setup", ren: "pick" },
   cust: null, prov: null, obj: null,
   meeting: null            // set by the meeting-setup screen
@@ -2510,7 +2510,7 @@ function boot() {
     if (e.key === "Escape") { Draw.toggle(false); Notes.toggle(false); }
   });
   Notes.boot();
-  show("new", "setup");
+  show("ren", "pick");
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

@@ -2146,7 +2146,8 @@ var DEMO_SIM_CSS =
   ".snap{height:auto!important;margin:0!important;overflow:visible!important;scroll-snap-type:none!important}" +
   ".snap section{min-height:0!important;display:block!important;padding:0 0 26px!important;max-width:none!important}" +
   /* the firm is chosen in the panel, not inside the frame */
-  ".filters .head button{display:none!important}" +
+  ".filters .head button:not(.demo-reset){display:none!important}" +
+  ".filters .head .demo-reset{margin-left:auto;background:var(--pink,#E21B71)!important;border-color:var(--pink,#E21B71)!important;color:#fff!important}" +
   "[data-rev]{opacity:1!important;transform:none!important;transition:none!important}";
 
 var DEMO_SIM_GRP = {
@@ -2194,11 +2195,9 @@ function demoUpsell() {
     "Benzer mekanların gerçekleşen verisinden hesaplanır — <b>tahmindir</b>, taahhüt değildir.</p></div>";
   sec.innerHTML = head +
     '<div class="card" style="padding:0;overflow:hidden;background:transparent;border:0;box-shadow:none">' +
-    '<iframe id="demo-sim" src="simulator/yeni_satis_simulatoru.html?v=demo5" title="Paketler yan yana" ' +
+    '<iframe id="demo-sim" src="simulator/yeni_satis_simulatoru.html?v=demo6" title="Paketler yan yana" ' +
     'style="display:block;width:100%;height:420px;border:0"></iframe></div>' +
-    '<div class="chips" style="margin-top:14px;align-items:center;gap:12px">' +
-    '<button class="btn sm" id="demo-sim-reset" type="button">↺ Firma Metriklerine Dön</button>' +
-    '<span class="note" id="demo-sim-note" style="margin:0"></span></div>';
+    '<div class="note" id="demo-sim-note"></div>';
   var f = $("#demo-sim");
   f.addEventListener("load", function () {
     var w = f.contentWindow, doc = f.contentDocument;
@@ -2223,10 +2222,20 @@ function demoUpsell() {
     var reset = function () { w.eval("closeMenu();Object.assign(S, " + own + ");showPage(2);"); };
     w.eval("applyCode('2460', SIM_CODES['2460']);");
     reset();
-    $("#demo-sim-reset").addEventListener("click", function () {
-      reset();
-      window.scrollTo({ top: sec.offsetTop - 12, behavior: "smooth" });
-    });
+    /* the button sits in the simulator's own settings header, next to the
+       "Paket karşılaştırma" pill, where the rep's eye already is */
+    var head = doc.querySelector(".filters .head");
+    if (head) {
+      var rb = doc.createElement("button");
+      rb.type = "button";
+      rb.className = "demo-reset";
+      rb.textContent = "↺ Firma Metriklerine Dön";
+      rb.addEventListener("click", function () {
+        reset();
+        window.scrollTo({ top: sec.offsetTop - 12, behavior: "smooth" });
+      });
+      head.appendChild(rb);
+    }
     /* the deck's wording: the method line leads, the "no promise" line steps back */
     $$(".warnband", doc).forEach(function (wb) {
       var span = wb.querySelector("span:last-child");
@@ -2243,7 +2252,7 @@ function demoUpsell() {
     $("#demo-sim-note").textContent = "Seçili gelen ayarlar: " +
       (pre.x === 3 ? "Pro Start (karşılaştırma 4X üzerinden)" : pre.x + "X paket") +
       " · " + pre.ps + " profil · " + pre.rt + " dönüş süresi · " + pre.rr +
-      " dönüş oranı — hepsi mekanın kendi verisinden. Senaryoları deneyin; bu düğme mekanın kendi ayarlarına geri getirir.";
+      " dönüş oranı — hepsi mekanın kendi verisinden. Senaryoları deneyin; \"Firma Metriklerine Dön\" mekanın kendi ayarlarına geri getirir.";
     /* no second scrollbar: the frame is exactly as tall as its content */
     var fit = function () {
       var h = Math.ceil(doc.documentElement.getBoundingClientRect().height || doc.body.scrollHeight);

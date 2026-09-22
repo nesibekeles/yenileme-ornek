@@ -2127,326 +2127,123 @@ RENDER.verdict = function () {
   v.innerHTML = h;
 };
 
-/* ---------------------------------------------------- demo: Satış Küpü simülatörü
-   yenileme-ornek only (spliced in by tools/build_demo_yenileme.py). Nes asked on
-   22.09.2026 for the Satış Küpü's "Maksimum verimi almak sizin elinizde" card —
-   the framed simulator — on the "Ya olsaydı? · Upsell" page. Same treatment as
-   the deck: header and access-code line hidden, venue-facing wording, each
-   result section scaled to fit one frame so the dots land on whole sections.
-   The frame is mounted once and the what-if body renders underneath, so the
-   chips on the page never reload the simulator. */
-var DEMO_SIM_CSS =
-  "header{display:none!important}:root{--hdr:0px!important}" +
-  ".codeline{display:none!important}" +
-  ".sec-title{font-size:30px!important}" +
-  "html,body{background:transparent!important;overflow:hidden!important;height:100%!important}" +
-  "#page0,#page1{min-height:0!important;height:100vh!important;box-sizing:border-box!important;" +
-  "overflow:auto!important;align-items:safe center!important;padding:14px 16px 18px!important}" +
-  "#foot{display:none!important}" +
-  "@media (max-height:560px){" +
-  "#page0,#page1{padding:8px 12px 10px!important}" +
-  "#page0 .card,#page1 .card{padding:14px 16px 12px!important;max-width:600px!important}" +
-  "#page0 h2,#page1 h2{font-size:16px!important}#page0 .sub,#page1 .sub{font-size:12px!important;margin-bottom:2px!important}" +
-  "#page0 .lbl,#page1 .lbl{margin:7px 0 4px!important;font-size:11.5px!important}" +
-  "#page1 .seg{gap:5px!important}#page1 .seg button{padding:6px 7px!important;font-size:12px!important;min-width:48px!important}" +
-  "#page0 select,#page0 input,#page1 select,#page1 input[type=text]{padding:7px 10px!important;font-size:13px!important}" +
-  "#page1 .cust-info{padding:6px 8px!important;font-size:11px!important}" +
-  "#startBtn{margin-top:10px!important;padding:10px!important;font-size:14px!important}}";
+/* ---------------------------------------------------- demo: "Ya olsaydı?" = the simulator
+   yenileme-ornek only (spliced in by tools/build_demo_yenileme.py in place of the
+   panel's own what-if page). Nes, 22.09.2026: the Satış Küpü simulator IS the
+   new Ya olsaydı — only its package-comparison module ("Paketler yan yana"),
+   every setting pre-selected from the selected provider, and no second
+   scrollbar: the frame is as tall as its content, the page scrolls as one.
 
-/* The what-if page's body container. Builds the simulator card above it the
-   first time (or after needPick wiped the section) and returns the body. */
-function demoSimBody() {
-  var body = $("#v-upsell-body");
-  if (body) return body;
-  var sec = $("#v-upsell");
-  sec.innerHTML =
-    '<div class="sec-head"><span class="kick">Satış Küpü · Maksimum verimi almak sizin elinizde</span>' +
-    "<h2>Aynı paketle ne kadar fark yaratılabilir?</h2><p>Şehir, kategori, paket ve profil " +
-    "kalitesini seçin; aylık etkileşim tahmini ekranda çıksın. Benzer mekanların gerçekleşen " +
-    "verisinden hesaplanır — tahmindir, taahhüt değildir.</p></div>" +
-    '<div class="card" style="padding:0;overflow:hidden"><iframe class="simframe" id="demo-sim" ' +
-    'src="simulator/yeni_satis_simulatoru.html?v=demo2" title="Satış Simülatörü" ' +
-    'style="display:block;border:0;border-radius:0"></iframe></div>' +
-    '<div id="v-upsell-body" style="margin-top:26px"></div>';
-  demoSimWire($("#demo-sim"));
-  return $("#v-upsell-body");
+   The simulator is same-origin, so its state is set straight from here
+   (S, applyCode, showPage, render live in the frame's global scope). */
+var DEMO_SIM_CSS =
+  "header,#foot,#minibar,#dotsNav,.codeline{display:none!important}" +
+  ":root{--hdr:0px!important;--mb:0px!important}" +
+  "html,body{background:transparent!important;overflow:hidden!important;height:auto!important;min-height:0!important}" +
+  "#page2{display:block!important}" +
+  /* one flowing column instead of the snap deck */
+  ".snap{height:auto!important;margin:0!important;overflow:visible!important;scroll-snap-type:none!important}" +
+  ".snap section{min-height:0!important;display:block!important;padding:0!important;max-width:none!important}" +
+  /* section 1 keeps only the settings row; section 2 only the comparison card */
+  "#s1>:not(.filters),#s2>.sec-title,#s2>.sec-sub,#roiWrap>.roi{display:none!important}" +
+  ".filters .head button,.filters .head .simtag{display:none!important}" +
+  ".filters{margin-bottom:12px!important}" +
+  ".roi-wrap{display:block!important;max-width:none!important}" +
+  "#xcard{margin:0!important}" +
+  ".xcards{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;gap:10px!important;margin-bottom:12px!important}" +
+  ".xc{flex:1 1 220px!important}" +
+  "[data-rev]{opacity:1!important;transform:none!important;transition:none!important}";
+
+var DEMO_SIM_GRP = {
+  "Kır Düğünü": "Kır",
+  "Düğün Salonları": "Balo+Salon", "Balo ve Davet Salonları": "Balo+Salon",
+  "Söz, Nişan Mekanları": "Söz Nişan",
+  "Kına ve Bekarlığa Veda Mekan": "Kına"
+};
+
+/* the simulator's inputs for a provider; null when it cannot model the firm */
+function demoSimPreset(p, meta) {
+  var city = null;
+  if (meta.cities.indexOf(p.city) >= 0) city = p.city;
+  else Object.keys(meta.city_groups || {}).forEach(function (g) {
+    if (meta.city_groups[g].indexOf(p.city) >= 0) city = g;
+  });
+  if (!city) return null;
+  var venueCats = ["Otel Düğünü", "Tarihi Mekanlar", "Nikah Salonları", "Nikah Sonrası Yemeği",
+    "Tekne Düğünü", "After Party", "Sosyal Tesisler"];
+  var grp = DEMO_SIM_GRP[p.cat] || (venueCats.indexOf(p.cat) >= 0 || p.catGroup === "Venue" ? "Diğer Mekan" : null);
+  if (!grp) return null;
+  var s = p.sim || {}, o = p.offers || {}, pr = p.profile || {};
+  /* Pro Start (3) is an entry package, never a renewal target — compare from 4X */
+  var x = s.x || p.x, X = x === 3 || [2, 4, 6].indexOf(x) < 0 ? 4 : x;
+  /* profile level: the panel's profile.score is the provider's position among
+     its peers (0–1) → the simulator's four levels by quarter */
+  var sc = pr.score == null ? 0.5 : pr.score;
+  var ps = sc < 0.25 ? "Zayıf" : sc < 0.5 ? "Orta" : sc < 0.75 ? "İyi" : "Çok İyi";
+  var hr = o.medianSec ? o.medianSec / 3600 : 6;
+  var rt = hr <= 0.5 ? "30 dk" : hr <= 2 ? "2 saat" : hr <= 6 ? "6 saat" : "24 saat";
+  var rate = o.respRate == null ? 1 : o.respRate;
+  var rr = rate < 0.375 ? "%25" : rate < 0.625 ? "%50" : rate < 0.875 ? "%75" : "%100";
+  return { city: city, grp: grp, X: X, ps: ps, rt: rt, rr: rr, x: x };
 }
 
-function demoSimWire(f) {
-  var doc = null, page2 = false;
-  function frameH() {
-    /* as tall as the window allows once the frame is scrolled to the top of
-       the page, never shorter than the venue card needs */
-    var top = f.getBoundingClientRect().top + window.scrollY;
-    return Math.max(520, Math.min(window.innerHeight - top - 24, 860));
-  }
-  function fit() {
-    if (!document.body.contains(f)) return;
-    f.style.height = frameH() + "px";
-    if (page2 && doc) fitSections();
-  }
-  /* scale every result section so it fits one frame; sections keep the frame's
-     real height so the snap points stay one screen apart */
-  function fitSections() {
-    var H = f.getBoundingClientRect().height;
-    $$(".snap section", doc).forEach(function (sec) {
-      sec.style.zoom = "1"; sec.style.minHeight = "0";
-      var pad = parseFloat(getComputedStyle(sec).paddingTop) + parseFloat(getComputedStyle(sec).paddingBottom);
-      var content = 0;
-      Array.prototype.forEach.call(sec.children, function (ch) {
-        if (getComputedStyle(ch).position !== "absolute") content += ch.getBoundingClientRect().height;
-      });
-      content += pad + 12;
-      var z = Math.min(1, H / content);
-      sec.style.zoom = z.toFixed(3);
-      sec.style.minHeight = Math.round(H / z) + "px";
-    });
-  }
-  fit();
-  window.addEventListener("resize", fit);
-  var lastVp = "";
-  var poll = setInterval(function () {
-    if (!document.body.contains(f)) { clearInterval(poll); return; }
-    var vp = window.innerWidth + "x" + window.innerHeight;
-    if (vp !== lastVp) { lastVp = vp; fit(); }
-  }, 400);
+function demoUpsell() {
+  var p = currentProvider();
+  if (!p) return needPick("v-upsell");
+  var sec = $("#v-upsell");
+  if (sec.dataset.pid === String(p.id) && $("#demo-sim")) return;   /* same firm: keep the frame */
+  sec.dataset.pid = p.id;
+  var head = '<div class="sec-head"><span class="kick">' + esc(p.name) + "</span><h2>Ya olsaydı?</h2>" +
+    "<p>Paketler yan yana: mekanın bugünkü paketi, profil kalitesi ve teklife dönüş alışkanlığı " +
+    "seçili gelir; farklı bir paketle aylık ve yıllık kaç çiftin iletişime geçeceğini birlikte okuyun. " +
+    "Benzer mekanların gerçekleşen verisinden hesaplanır — <b>tahmindir</b>, taahhüt değildir.</p></div>";
+  sec.innerHTML = head +
+    '<div class="card" style="padding:0;overflow:hidden;background:transparent;border:0;box-shadow:none">' +
+    '<iframe id="demo-sim" src="simulator/yeni_satis_simulatoru.html?v=demo3" title="Paketler yan yana" ' +
+    'style="display:block;width:100%;height:420px;border:0"></iframe></div>' +
+    '<div class="note" id="demo-sim-note"></div>';
+  var f = $("#demo-sim");
   f.addEventListener("load", function () {
+    var w = f.contentWindow, doc = f.contentDocument;
+    var st = doc.createElement("style");
+    st.textContent = DEMO_SIM_CSS;
+    doc.head.appendChild(st);
+    var meta = JSON.parse(doc.getElementById("model").textContent).meta;
+    var pre = demoSimPreset(p, meta);
+    if (!pre) {
+      f.remove();
+      $("#demo-sim-note").innerHTML = "<div class='card'><b>Bu sayfa için paket karşılaştırması yok.</b> " +
+        "Simülatör yalnızca mekan kategorilerini ve satış şehirlerini modeller; " + esc(p.city) + " · " +
+        esc(p.cat) + " bu kapsamın dışında.</div>";
+      return;
+    }
+    /* the comparison code, then the provider's own settings, then page 2 */
+    w.eval("applyCode('2460', SIM_CODES['2460']);" +
+      "Object.assign(S, " + JSON.stringify({ city: pre.city, grp: pre.grp, X: pre.X, ps: pre.ps,
+        rt: pre.rt, rr: pre.rr, scen: "mid", dist: "", cust: null }) + ");" +
+      "showPage(2);");
+    var who = doc.getElementById("whoTxt");
+    if (who) who.textContent = p.name + " · " + pre.city + " · " + w.eval("GRP_LABEL")[pre.grp];
+    /* "seçili" in the table = the package being compared; say what the firm has today */
+    $("#demo-sim-note").textContent = "Seçili gelen ayarlar: " +
+      (pre.x === 3 ? "Pro Start (karşılaştırma 4X üzerinden)" : pre.x + "X paket") +
+      " · " + pre.ps + " profil · " + pre.rt + " dönüş süresi · " + pre.rr +
+      " dönüş oranı — hepsi mekanın kendi verisinden. Üstteki satırdan değiştirebilirsiniz.";
+    /* no second scrollbar: the frame is exactly as tall as its content */
+    var fit = function () {
+      var h = Math.ceil(doc.documentElement.getBoundingClientRect().height || doc.body.scrollHeight);
+      if (h > 40) f.style.height = h + "px";
+    };
     fit();
-    try {
-      doc = f.contentDocument;
-      if (!doc) return;
-      var st = doc.createElement("style");
-      st.textContent = DEMO_SIM_CSS;
-      doc.head.appendChild(st);
-      $$(".warnband", doc).forEach(function (w) {
-        var span = w.querySelector("span:last-child");
-        if (span) span.innerHTML =
-          "<b>Benzer mekanların gerçekleşen verisinden hesaplanır.</b> " +
-          '<span style="font-weight:400">Sonuçlar mekanın profiline eklediği ' +
-          "<u>fotoğraf kalitesi, kampanya çıkıp çıkmadığı, kendisine ulaşan çiftlere " +
-          "ne kadar sürede geri döndüğü</u> gibi çeşitli metriklere göre değişir.</span>" +
-          "<small>Tüm rakamlar tahmini ortalamalardır — taahhüt değildir.</small>";
-      });
-      /* wording: the venue never hears "simülasyon" */
-      var sub1 = doc.querySelector("#page1 .sub");
-      if (sub1) sub1.textContent = "Görüşeceğin mekanın bilgilerini seç, incelemeye başla.";
-      $$("#page1 .gobtn", doc).forEach(function (b) {
-        if (b.textContent.indexOf("Simülasyona geç") >= 0) b.textContent = "İncele →";
-      });
-      var line = doc.getElementById("simNameLine");
-      if (line) {
-        var fixing = false;
-        var fixLine = function () {
-          if (fixing) return;
-          fixing = true;
-          var t = line.textContent.replace(/\s*Değiştir\s*$/, "");
-          if (t.indexOf("Simülasyon:") === 0) t = "Paket:" + t.slice("Simülasyon:".length);
-          line.innerHTML = esc(t) + ' <button id="yss-change" style="border:0;background:none;' +
-            'color:var(--pink,#E21B71);text-decoration:underline;cursor:pointer;font:inherit;' +
-            'font-size:12px;font-weight:700;padding:0 0 0 6px">Değiştir</button>';
-          var ch = doc.getElementById("yss-change");
-          if (ch) ch.onclick = function () { doc.defaultView.showPage(0); };
-          fixing = false;
-        };
-        fixLine();
-        new doc.defaultView.MutationObserver(function () {
-          if (!fixing && line.textContent.indexOf("Simülasyon:") === 0) fixLine();
-        }).observe(line, { childList: true, characterData: true, subtree: true });
-      }
-      var p2 = doc.getElementById("page2");
-      var onPage = function () { page2 = p2.style.display !== "none"; fit(); };
-      new doc.defaultView.MutationObserver(onPage).observe(p2, { attributes: true, attributeFilter: ["style"] });
-      onPage();
-      var snap = doc.getElementById("snap");
-      $$("#dotsNav button", doc).forEach(function (b) {
-        b.addEventListener("click", function (ev) {
-          ev.stopImmediatePropagation(); ev.preventDefault();
-          var sec = doc.getElementById(b.dataset.s);
-          if (!sec) return;
-          snap.scrollTop = snap.scrollTop + sec.getBoundingClientRect().top -
-            snap.getBoundingClientRect().top;
-        }, true);
-      });
-    } catch (e) { /* cross-origin frame — the simulator keeps its header */ }
+    new w.ResizeObserver(fit).observe(doc.body);
+    window.addEventListener("resize", fit);
   });
 }
 
 /* ------------------------------------------------------- what-if / upsell */
 var whatIf = null;
 
-RENDER.upsell = function () {
-  var p = currentProvider();
-  if (!p) return needPick("v-upsell");
-  var v = demoSimBody(), s = p.sim, o = p.offers || {}, pr = p.profile || {}, b = bench(p);
-
-  if (!s || !o.total) {
-    /* Happens for pages that went live very recently: the PWF simulator and the
-       offer tables both need a 30-day history before they produce anything. */
-    v.innerHTML = '<div class="sec-head"><span class="kick">' + esc(p.name) +
-      '</span><h2>Ya olsaydı?</h2></div><div class="card"><p style="margin:0">' +
-      "Bu sayfa için henüz simülasyon verisi oluşmamış — genellikle yayına yeni girmiş " +
-      "sayfalarda görülür. Karne ve Değerlendirme sekmeleri yine de çalışır." +
-      '</p><div class="chips" style="margin-top:12px">' +
-      "<button class='btn sm' onclick=\"__go('ren','karne')\">Karneye dön</button>" +
-      "<button class='btn sm ghost' onclick=\"__go('ren','offer')\">Yenileme teklifi →</button></div></div>";
-    return;
-  }
-  if (!whatIf) {
-    var cur = s.x || p.x;
-    whatIf = { x: cur === 3 ? 4 : cur, speed: null, profile: false, weddingRev: 250000 };
-  }
-
-  var scope = s.scope, table = R.xw[scope] || {};
-  /* Pro Start is a one-off entry package, never an upsell target — renewals
-     continue on Winner, so x=3 has no place on this screen. */
-  var xs = Object.keys(table).map(Number)
-    .filter(function (x) { return !(scope === "Venue" && x === 3); })
-    .sort(function (a2, b2) { return a2 - b2; });
-  var curHr = o.medianSec ? o.medianSec / 3600 : null;
-  var speeds = (R.speedCurve || []);
-
-  var h = '<div class="sec-head"><span class="kick">' + esc(p.name) + '</span><h2>Ya olsaydı?</h2>' +
-    "<p>Soldaki ayarları değiştirin, sağdaki rakamlar anında güncellensin. " +
-    "Hepsi son 12 ayın gerçek verisi üzerinden hesaplanır ve <b>tahmindir</b>.</p></div>";
-
-  h += '<div class="whatif"><div class="card wi-ctrl">' +
-    '<label class="fld first">Paket</label><div class="chips" id="wi-x">' +
-    xs.map(function (x) {
-      var nm = scope === "Venue" ? "Winner " + x + "X" : x + "X";
-      return '<button class="chip" data-x="' + x + '" aria-pressed="' + (x === whatIf.x) + '">' + nm +
-        (x === (s.x || p.x) ? " ·mevcut" : "") + "</button>";
-    }).join("") + "</div>" +
-    '<label class="fld">Teklife dönüş süreniz</label><div class="chips" id="wi-speed">' +
-    '<button class="chip" data-sp="" aria-pressed="' + (whatIf.speed === null) + '">Mevcut (' +
-    (curHr != null ? hrs(curHr) : "—") + ")</button>" +
-    speeds.map(function (c) {
-      return '<button class="chip" data-sp="' + esc(c.band) + '" aria-pressed="' +
-        (whatIf.speed === c.band) + '">' + esc(c.band) + "</button>";
-    }).join("") + "</div>" +
-    '<label class="fld">Profil</label><div class="chips" id="wi-prof">' +
-    '<button class="chip" data-pf="1" aria-pressed="' + whatIf.profile + '">Profili emsal seviyesine çıkar</button></div>' +
-    ((s.profileCoef || 1) >= 0.99
-      ? "<div class='note' style='margin-top:4px'>Profil katsayınız zaten emsal seviyesinde — bu kaldıraçtan " +
-        "kazanacağınız ek görünürlük yok.</div>" : "") +
-    '<label class="fld">Bir düğünden ortalama kazancınız</label>' +
-    "<input type='number' id='wi-rev' step='5000' value='" + whatIf.weddingRev + "'>" +
-    '<button class="btn sm ghost" id="wi-reset" style="margin-top:14px">Sıfırla</button></div>';
-
-  /* ---------------- model ---------------- */
-  var sm = simulateX(p, whatIf.x);
-  var pkgLift = (whatIf.x === (s.x || p.x)) ? 1 : (sm ? sm.lift : 1);
-  var profLift = whatIf.profile ? clamp(1 / (s.profileCoef || 1), 1, 1.6) : 1;
-  var curBand = curHr != null ? dealRateForHours(curHr) : null;
-  var tgtBand = whatIf.speed
-    ? speeds.filter(function (c) { return c.band === whatIf.speed; })[0]
-    : curBand;
-
-  var base = { offers: o.total, resp: o.responded };
-  var newOffers = o.total * pkgLift * profLift;
-  var respRate = whatIf.speed ? Math.max(o.respRate || 0, 0.9) : (o.respRate || 0);
-  var newResp = newOffers * respRate;
-  var curDeals = curBand ? o.total * curBand.dealRate : null;
-  var newDeals = tgtBand ? newOffers * tgtBand.dealRate : null;
-  var extraDeals = (curDeals != null && newDeals != null) ? newDeals - curDeals : null;
-  var extraRev = extraDeals != null ? extraDeals * whatIf.weddingRev : null;
-
-  function delta(nw, old) {
-    if (old == null || nw == null || !old) return "";
-    var d = (nw / old - 1) * 100;
-    if (Math.abs(d) < 0.5) return "<span class='delta'>değişmez</span>";
-    return "<span class='delta " + (d > 0 ? "up" : "dn") + "'>" + (d > 0 ? "+" : "") + n(d, 0) + "%</span>";
-  }
-
-  h += '<div class="wi-out"><div class="grid g2">' +
-    '<div class="kpi"><div class="lb">Yıllık teklif</div><div class="v num">' + n(newOffers) + "</div>" +
-    '<div class="cmp">bugün ' + n(base.offers) + " · " + delta(newOffers, base.offers) + "</div></div>" +
-    '<div class="kpi"><div class="lb">Dönülen teklif</div><div class="v num">' + n(newResp) + "</div>" +
-    '<div class="cmp">bugün ' + n(base.resp) + " · " + delta(newResp, base.resp) + "</div></div>" +
-    '<div class="kpi ' + (extraDeals > 0.5 ? "good" : "") + '"><div class="lb">Tahmini anlaşma / yıl</div>' +
-    '<div class="v num">' + (newDeals != null ? n(newDeals, 1) : "—") + "</div>" +
-    '<div class="cmp">bugün ' + (curDeals != null ? n(curDeals, 1) : "—") + " · " + delta(newDeals, curDeals) + "</div></div>" +
-    '<div class="kpi ' + (extraRev > 0 ? "good" : "") + '"><div class="lb">Ek kazanç potansiyeli</div>' +
-    '<div class="v num">' + (extraRev != null ? tl(extraRev) : "—") + "</div>" +
-    '<div class="cmp">ek anlaşma × düğün kazancınız</div></div></div>';
-
-  /* narrative */
-  var story = [];
-  if (whatIf.x !== (s.x || p.x)) {
-    story.push("<b>" + (scope === "Venue" ? "Winner " + whatIf.x + "X" : whatIf.x + "X") +
-      "</b> pakete geçseydiniz, listede görünmeniz <b>%" + n((pkgLift - 1) * 100, 0) + "</b> değişirdi");
-  }
-  if (whatIf.speed && tgtBand && curBand && tgtBand.band !== curBand.band) {
-    /* "1 saatin altında" and "24 saatten uzun" are already complete phrases;
-       only the plain ranges need an "içinde". */
-    var bandPhrase = esc(tgtBand.band) +
-      (/altında|uzun/.test(tgtBand.band) ? "" : " içinde");
-    story.push("tekliflere <b>" + bandPhrase + "</b> dönseydiniz, aynı bantta çalışan " +
-      n(tgtBand.n) + " mekanın anlaşma oranı <b>" + pct(tgtBand.dealRate, 1) + "</b> (sizin bandınız: " +
-      pct(curBand.dealRate, 1) + ")");
-  }
-  if (whatIf.profile && profLift > 1.01) {
-    story.push("profiliniz emsal seviyesine çıksaydı görünürlüğünüz <b>%" + n((profLift - 1) * 100, 0) + "</b> artardı");
-  }
-  h += '<div class="wi-story" style="margin-top:14px">' +
-    (story.length
-      ? "Eğer " + story.join("; ") + " — bu da yılda yaklaşık <b>" +
-        (extraDeals != null ? n(extraDeals, 1) : "—") + " ek düğün</b>" +
-        (extraRev ? " ve <b>" + tl(extraRev) + " ek ciro</b>" : "") + " demek."
-      : "Ayarları değiştirin; ne kazanacağınızı burada birlikte okuyalım.") + "</div>";
-
-  /* profile components */
-  var comp = s.comp || {};
-  var COMPL = { gallery: ["Galeri", n(pr.images) + " fotoğraf"], review: ["Yorum", n(pr.reviews) + " yorum"],
-    discount: ["Kampanya", n(pr.discounts) + " kampanya"], item: ["Katalog / menü", ""] };
-  h += '<div class="card" style="margin-top:14px"><h3>Profil bileşenleriniz</h3>' +
-    "<p style='color:var(--mute);font-size:13px;margin:5px 0 12px'>Her biri 0–100. Zayıf bileşenler " +
-    "paket yükseltmesinin etkisini de sınırlar — <b>önce burayı kapatın.</b></p>" +
-    Object.keys(COMPL).map(function (k) {
-      var val = comp[k];
-      if (val == null) return "";
-      var cls = val >= 70 ? "ok" : val >= 40 ? "warn" : "bad";
-      return "<div style='margin-bottom:11px'><div style='display:flex;justify-content:space-between;font-size:13px;font-weight:700'>" +
-        "<span>" + esc(COMPL[k][0]) + (COMPL[k][1] ? " <span style='color:var(--mute);font-weight:500'>· " +
-        esc(COMPL[k][1]) + "</span>" : "") + "</span>" +
-        '<span class="pill ' + cls + '">' + n(val, 0) + " / 100</span></div>" +
-        '<div class="bar-track" style="margin-top:5px"><div class="bar-fill" style="width:' +
-        Math.min(100, val) + '%"></div></div></div>';
-    }).join("") + "</div>";
-
-  h += '<div class="card"><h3>Ek satış fırsatları</h3><ul style="padding-left:18px;font-size:14px">' +
-    [(whatIf.x < Math.max.apply(null, xs) ? "<b>Paket yükseltme:</b> yukarıdaki tabloda etkisini birlikte okuyun." : null),
-     (pr.specialOffer ? null : "<b>Özel Fiyat kampanyası:</b> kartı listede farklılaştırır, tıklanma oranını yükseltir."),
-     (pr.videos ? null : "<b>Video:</b> sayfada video yok; ekleme talebini görüşmede alın."),
-     ((b && b.review_count && pr.reviews < b.review_count) ?
-       "<b>Yorum:</b> emsal ortancası " + n(b.review_count) + ", sizde " + n(pr.reviews) +
-       ". Connect üzerinden yorum talebi gönderin." : null),
-     "<b>Ek kategori:</b> mekan birden fazla organizasyon tipine hizmet veriyorsa ikinci kategori indirimli açılabilir.",
-     "<b>Turbo:</b> yoğun sezona girerken 3 aylık görünürlük yükseltmesi."]
-      .filter(Boolean).map(function (x) { return "<li style='margin-bottom:5px'>" + x + "</li>"; }).join("") +
-    "</ul><button class='btn' style='margin-top:10px' onclick=\"__go('ren','offer')\">Teklifi hazırla →</button></div>";
-
-  h += '<div class="note">Yöntem: paket etkisi, Qlik PWF simülatörünün emsal grubunuza ait gösterim eğrisinden; ' +
-    "dönüş süresi etkisi, aynı dönüş bandındaki mekanların gözlemlenen anlaşma oranından gelir " +
-    "(ilişki, nedensellik değil). Profil etkisi, profil katsayınızın emsal seviyesine çıkması varsayımıdır.</div></div></div>";
-
-  v.innerHTML = h;
-
-  $$("#wi-x .chip").forEach(function (bt) {
-    bt.addEventListener("click", function () { whatIf.x = +bt.dataset.x; RENDER.upsell(); });
-  });
-  $$("#wi-speed .chip").forEach(function (bt) {
-    bt.addEventListener("click", function () { whatIf.speed = bt.dataset.sp || null; RENDER.upsell(); });
-  });
-  $$("#wi-prof .chip").forEach(function (bt) {
-    bt.addEventListener("click", function () { whatIf.profile = !whatIf.profile; RENDER.upsell(); });
-  });
-  $("#wi-rev").addEventListener("change", function () {
-    whatIf.weddingRev = +this.value || 0; RENDER.upsell();
-  });
-  $("#wi-reset").addEventListener("click", function () {
-    whatIf = null; RENDER.upsell();
-  });
-};
+RENDER.upsell = demoUpsell;
 
 /* ------------------------------------------------------------- offer */
 var renewOffer = { disc: null };

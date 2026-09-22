@@ -2127,13 +2127,157 @@ RENDER.verdict = function () {
   v.innerHTML = h;
 };
 
+/* ---------------------------------------------------- demo: Satış Küpü simülatörü
+   yenileme-ornek only (spliced in by tools/build_demo_yenileme.py). Nes asked on
+   22.09.2026 for the Satış Küpü's "Maksimum verimi almak sizin elinizde" card —
+   the framed simulator — on the "Ya olsaydı? · Upsell" page. Same treatment as
+   the deck: header and access-code line hidden, venue-facing wording, each
+   result section scaled to fit one frame so the dots land on whole sections.
+   The frame is mounted once and the what-if body renders underneath, so the
+   chips on the page never reload the simulator. */
+var DEMO_SIM_CSS =
+  "header{display:none!important}:root{--hdr:0px!important}" +
+  ".codeline{display:none!important}" +
+  ".sec-title{font-size:30px!important}" +
+  "html,body{background:transparent!important;overflow:hidden!important;height:100%!important}" +
+  "#page0,#page1{min-height:0!important;height:100vh!important;box-sizing:border-box!important;" +
+  "overflow:auto!important;align-items:safe center!important;padding:14px 16px 18px!important}" +
+  "#foot{display:none!important}" +
+  "@media (max-height:560px){" +
+  "#page0,#page1{padding:8px 12px 10px!important}" +
+  "#page0 .card,#page1 .card{padding:14px 16px 12px!important;max-width:600px!important}" +
+  "#page0 h2,#page1 h2{font-size:16px!important}#page0 .sub,#page1 .sub{font-size:12px!important;margin-bottom:2px!important}" +
+  "#page0 .lbl,#page1 .lbl{margin:7px 0 4px!important;font-size:11.5px!important}" +
+  "#page1 .seg{gap:5px!important}#page1 .seg button{padding:6px 7px!important;font-size:12px!important;min-width:48px!important}" +
+  "#page0 select,#page0 input,#page1 select,#page1 input[type=text]{padding:7px 10px!important;font-size:13px!important}" +
+  "#page1 .cust-info{padding:6px 8px!important;font-size:11px!important}" +
+  "#startBtn{margin-top:10px!important;padding:10px!important;font-size:14px!important}}";
+
+/* The what-if page's body container. Builds the simulator card above it the
+   first time (or after needPick wiped the section) and returns the body. */
+function demoSimBody() {
+  var body = $("#v-upsell-body");
+  if (body) return body;
+  var sec = $("#v-upsell");
+  sec.innerHTML =
+    '<div class="sec-head"><span class="kick">Satış Küpü · Maksimum verimi almak sizin elinizde</span>' +
+    "<h2>Aynı paketle ne kadar fark yaratılabilir?</h2><p>Şehir, kategori, paket ve profil " +
+    "kalitesini seçin; aylık etkileşim tahmini ekranda çıksın. Benzer mekanların gerçekleşen " +
+    "verisinden hesaplanır — tahmindir, taahhüt değildir.</p></div>" +
+    '<div class="card" style="padding:0;overflow:hidden"><iframe class="simframe" id="demo-sim" ' +
+    'src="simulator/yeni_satis_simulatoru.html?v=demo2" title="Satış Simülatörü" ' +
+    'style="display:block;border:0;border-radius:0"></iframe></div>' +
+    '<div id="v-upsell-body" style="margin-top:26px"></div>';
+  demoSimWire($("#demo-sim"));
+  return $("#v-upsell-body");
+}
+
+function demoSimWire(f) {
+  var doc = null, page2 = false;
+  function frameH() {
+    /* as tall as the window allows once the frame is scrolled to the top of
+       the page, never shorter than the venue card needs */
+    var top = f.getBoundingClientRect().top + window.scrollY;
+    return Math.max(520, Math.min(window.innerHeight - top - 24, 860));
+  }
+  function fit() {
+    if (!document.body.contains(f)) return;
+    f.style.height = frameH() + "px";
+    if (page2 && doc) fitSections();
+  }
+  /* scale every result section so it fits one frame; sections keep the frame's
+     real height so the snap points stay one screen apart */
+  function fitSections() {
+    var H = f.getBoundingClientRect().height;
+    $$(".snap section", doc).forEach(function (sec) {
+      sec.style.zoom = "1"; sec.style.minHeight = "0";
+      var pad = parseFloat(getComputedStyle(sec).paddingTop) + parseFloat(getComputedStyle(sec).paddingBottom);
+      var content = 0;
+      Array.prototype.forEach.call(sec.children, function (ch) {
+        if (getComputedStyle(ch).position !== "absolute") content += ch.getBoundingClientRect().height;
+      });
+      content += pad + 12;
+      var z = Math.min(1, H / content);
+      sec.style.zoom = z.toFixed(3);
+      sec.style.minHeight = Math.round(H / z) + "px";
+    });
+  }
+  fit();
+  window.addEventListener("resize", fit);
+  var lastVp = "";
+  var poll = setInterval(function () {
+    if (!document.body.contains(f)) { clearInterval(poll); return; }
+    var vp = window.innerWidth + "x" + window.innerHeight;
+    if (vp !== lastVp) { lastVp = vp; fit(); }
+  }, 400);
+  f.addEventListener("load", function () {
+    fit();
+    try {
+      doc = f.contentDocument;
+      if (!doc) return;
+      var st = doc.createElement("style");
+      st.textContent = DEMO_SIM_CSS;
+      doc.head.appendChild(st);
+      $$(".warnband", doc).forEach(function (w) {
+        var span = w.querySelector("span:last-child");
+        if (span) span.innerHTML =
+          "<b>Benzer mekanların gerçekleşen verisinden hesaplanır.</b> " +
+          '<span style="font-weight:400">Sonuçlar mekanın profiline eklediği ' +
+          "<u>fotoğraf kalitesi, kampanya çıkıp çıkmadığı, kendisine ulaşan çiftlere " +
+          "ne kadar sürede geri döndüğü</u> gibi çeşitli metriklere göre değişir.</span>" +
+          "<small>Tüm rakamlar tahmini ortalamalardır — taahhüt değildir.</small>";
+      });
+      /* wording: the venue never hears "simülasyon" */
+      var sub1 = doc.querySelector("#page1 .sub");
+      if (sub1) sub1.textContent = "Görüşeceğin mekanın bilgilerini seç, incelemeye başla.";
+      $$("#page1 .gobtn", doc).forEach(function (b) {
+        if (b.textContent.indexOf("Simülasyona geç") >= 0) b.textContent = "İncele →";
+      });
+      var line = doc.getElementById("simNameLine");
+      if (line) {
+        var fixing = false;
+        var fixLine = function () {
+          if (fixing) return;
+          fixing = true;
+          var t = line.textContent.replace(/\s*Değiştir\s*$/, "");
+          if (t.indexOf("Simülasyon:") === 0) t = "Paket:" + t.slice("Simülasyon:".length);
+          line.innerHTML = esc(t) + ' <button id="yss-change" style="border:0;background:none;' +
+            'color:var(--pink,#E21B71);text-decoration:underline;cursor:pointer;font:inherit;' +
+            'font-size:12px;font-weight:700;padding:0 0 0 6px">Değiştir</button>';
+          var ch = doc.getElementById("yss-change");
+          if (ch) ch.onclick = function () { doc.defaultView.showPage(0); };
+          fixing = false;
+        };
+        fixLine();
+        new doc.defaultView.MutationObserver(function () {
+          if (!fixing && line.textContent.indexOf("Simülasyon:") === 0) fixLine();
+        }).observe(line, { childList: true, characterData: true, subtree: true });
+      }
+      var p2 = doc.getElementById("page2");
+      var onPage = function () { page2 = p2.style.display !== "none"; fit(); };
+      new doc.defaultView.MutationObserver(onPage).observe(p2, { attributes: true, attributeFilter: ["style"] });
+      onPage();
+      var snap = doc.getElementById("snap");
+      $$("#dotsNav button", doc).forEach(function (b) {
+        b.addEventListener("click", function (ev) {
+          ev.stopImmediatePropagation(); ev.preventDefault();
+          var sec = doc.getElementById(b.dataset.s);
+          if (!sec) return;
+          snap.scrollTop = snap.scrollTop + sec.getBoundingClientRect().top -
+            snap.getBoundingClientRect().top;
+        }, true);
+      });
+    } catch (e) { /* cross-origin frame — the simulator keeps its header */ }
+  });
+}
+
 /* ------------------------------------------------------- what-if / upsell */
 var whatIf = null;
 
 RENDER.upsell = function () {
   var p = currentProvider();
   if (!p) return needPick("v-upsell");
-  var v = $("#v-upsell"), s = p.sim, o = p.offers || {}, pr = p.profile || {}, b = bench(p);
+  var v = demoSimBody(), s = p.sim, o = p.offers || {}, pr = p.profile || {}, b = bench(p);
 
   if (!s || !o.total) {
     /* Happens for pages that went live very recently: the PWF simulator and the

@@ -2130,28 +2130,23 @@ RENDER.verdict = function () {
 /* ---------------------------------------------------- demo: "Ya olsaydı?" = the simulator
    yenileme-ornek only (spliced in by tools/build_demo_yenileme.py in place of the
    panel's own what-if page). Nes, 22.09.2026: the Satış Küpü simulator IS the
-   new Ya olsaydı — only its package-comparison module ("Paketler yan yana"),
-   every setting pre-selected from the selected provider, and no second
+   new Ya olsaydı — the whole results page (settings row, the six KPI cards,
+   ROI, "Paketler yan yana") as one flowing column, every setting pre-selected from the selected provider, and no second
    scrollbar: the frame is as tall as its content, the page scrolls as one.
 
    The simulator is same-origin, so its state is set straight from here
    (S, applyCode, showPage, render live in the frame's global scope). */
 var DEMO_SIM_CSS =
-  "header,#foot,#minibar,#dotsNav,.codeline{display:none!important}" +
+  "header,#foot,#minibar,#dotsNav,.codeline,.scrollhint{display:none!important}" +
   ":root{--hdr:0px!important;--mb:0px!important}" +
   "html,body{background:transparent!important;overflow:hidden!important;height:auto!important;min-height:0!important}" +
   "#page2{display:block!important}" +
-  /* one flowing column instead of the snap deck */
+  /* one flowing column instead of the snap deck: the whole page 2 (settings,
+     the six KPI cards, ROI and the package comparison) top to bottom */
   ".snap{height:auto!important;margin:0!important;overflow:visible!important;scroll-snap-type:none!important}" +
-  ".snap section{min-height:0!important;display:block!important;padding:0!important;max-width:none!important}" +
-  /* section 1 keeps only the settings row; section 2 only the comparison card */
-  "#s1>:not(.filters),#s2>.sec-title,#s2>.sec-sub,#roiWrap>.roi{display:none!important}" +
-  ".filters .head button,.filters .head .simtag{display:none!important}" +
-  ".filters{margin-bottom:12px!important}" +
-  ".roi-wrap{display:block!important;max-width:none!important}" +
-  "#xcard{margin:0!important}" +
-  ".xcards{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;gap:10px!important;margin-bottom:12px!important}" +
-  ".xc{flex:1 1 220px!important}" +
+  ".snap section{min-height:0!important;display:block!important;padding:0 0 26px!important;max-width:none!important}" +
+  /* the firm is chosen in the panel, not inside the frame */
+  ".filters .head button{display:none!important}" +
   "[data-rev]{opacity:1!important;transform:none!important;transition:none!important}";
 
 var DEMO_SIM_GRP = {
@@ -2194,12 +2189,12 @@ function demoUpsell() {
   if (sec.dataset.pid === String(p.id) && $("#demo-sim")) return;   /* same firm: keep the frame */
   sec.dataset.pid = p.id;
   var head = '<div class="sec-head"><span class="kick">' + esc(p.name) + "</span><h2>Ya olsaydı?</h2>" +
-    "<p>Paketler yan yana: mekanın bugünkü paketi, profil kalitesi ve teklife dönüş alışkanlığı " +
-    "seçili gelir; farklı bir paketle aylık ve yıllık kaç çiftin iletişime geçeceğini birlikte okuyun. " +
+    "<p>Mekanın bugünkü paketi, profil kalitesi ve teklife dönüş alışkanlığı seçili gelir; " +
+    "farklı bir paketle kaç çiftin iletişime geçeceğini ve yatırımın geri dönüşünü birlikte okuyun. " +
     "Benzer mekanların gerçekleşen verisinden hesaplanır — <b>tahmindir</b>, taahhüt değildir.</p></div>";
   sec.innerHTML = head +
     '<div class="card" style="padding:0;overflow:hidden;background:transparent;border:0;box-shadow:none">' +
-    '<iframe id="demo-sim" src="simulator/yeni_satis_simulatoru.html?v=demo3" title="Paketler yan yana" ' +
+    '<iframe id="demo-sim" src="simulator/yeni_satis_simulatoru.html?v=demo4" title="Paketler yan yana" ' +
     'style="display:block;width:100%;height:420px;border:0"></iframe></div>' +
     '<div class="note" id="demo-sim-note"></div>';
   var f = $("#demo-sim");
@@ -2222,6 +2217,16 @@ function demoUpsell() {
       "Object.assign(S, " + JSON.stringify({ city: pre.city, grp: pre.grp, X: pre.X, ps: pre.ps,
         rt: pre.rt, rr: pre.rr, scen: "mid", dist: "", cust: null }) + ");" +
       "showPage(2);");
+    /* the deck's wording: the method line leads, the "no promise" line steps back */
+    $$(".warnband", doc).forEach(function (wb) {
+      var span = wb.querySelector("span:last-child");
+      if (span) span.innerHTML =
+        "<b>Benzer mekanların gerçekleşen verisinden hesaplanır.</b> " +
+        '<span style="font-weight:400">Sonuçlar mekanın profiline eklediği ' +
+        "<u>fotoğraf kalitesi, kampanya çıkıp çıkmadığı, kendisine ulaşan çiftlere " +
+        "ne kadar sürede geri döndüğü</u> gibi çeşitli metriklere göre değişir.</span>" +
+        "<small>Tüm rakamlar tahmini ortalamalardır — taahhüt değildir.</small>";
+    });
     var who = doc.getElementById("whoTxt");
     if (who) who.textContent = p.name + " · " + pre.city + " · " + w.eval("GRP_LABEL")[pre.grp];
     /* "seçili" in the table = the package being compared; say what the firm has today */
